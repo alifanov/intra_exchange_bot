@@ -12,7 +12,7 @@ polo = Poloniex(key=POLONIEX_API_KEY, secret=POLONIEX_API_SECRET)
 
 
 def make_trade(pair, start_volume):
-    print('[{}]: Attempt to trade with volume: {}'.format(datetime.now().isoformat()), start_volume)
+    print('[{}]: Attempt to trade with volume: {}'.format(datetime.now().isoformat(), start_volume))
     if pair['buy']['price'] * start_volume < 0.0001:
         print('Too small volume')
         return
@@ -33,7 +33,7 @@ def make_trade(pair, start_volume):
 
 
 if __name__ == "__main__":
-    volume = polo.returnBalances()['BTC']
+    balances = polo.returnBalances()
 
     while True:
         order_books = polo.returnOrderBook(depth=1)
@@ -68,5 +68,6 @@ if __name__ == "__main__":
                     })
         for ps in opps:
             if ps['buy']['pair'].startswith('BTC_'):
+                volume = float(balances['BTC'])
                 make_trade(ps, (volume * (1.0 - 0.0025)))
         time.sleep(2.0)
