@@ -12,6 +12,7 @@ polo = Poloniex(key=POLONIEX_API_KEY, secret=POLONIEX_API_SECRET)
 
 
 def make_trade(pair, start_volume):
+    start_volume /= pair['buy']['price']
     print('[{}]: Attempt to trade with volume: {}'.format(datetime.now().isoformat(), start_volume))
     if pair['buy']['price'] * start_volume < 0.0001:
         print('Too small volume')
