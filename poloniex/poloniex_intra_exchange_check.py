@@ -18,16 +18,19 @@ def make_trade(pair, start_volume):
         print('Too small volume')
         return
     response = polo.buy(pair['buy']['pair'], pair['buy']['price'], start_volume, orderType='fillOrKill')
-    next_volume = sum([t['amount'] for t in response['resultingTrades']])
+    print(response)
+    next_volume = sum([float(t['amount']) for t in response['resultingTrades']])
     spend = sum([t['total'] for t in response['resultingTrades']])
     print('Order #1: spend - {}'.format(spend))
 
     response = polo.sell(pair['sell1']['pair'], pair['sell1']['price'], next_volume, orderType='fillOrKill')
-    next_volume = sum([t['total'] for t in response['resultingTrades']])
+    print(response)
+    next_volume = sum([float(t['total']) for t in response['resultingTrades']])
     print('Order #2: got - {}'.format(next_volume))
 
     response = polo.sell(pair['sell2']['pair'], pair['sell2']['price'], next_volume, orderType='fillOrKill')
-    profit = sum([t['total'] for t in response['resultingTrades']])
+    print(response)
+    profit = sum([float(t['total']) for t in response['resultingTrades']])
     print('Order #3: profit - {}'.format(profit))
 
     print('P&L: {}'.format(profit - spend))
