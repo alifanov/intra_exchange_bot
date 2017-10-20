@@ -5,15 +5,17 @@ from datetime import datetime
 from itertools import chain, permutations
 from poloniex import Poloniex
 
-POLONIEX_API_KEY = ''
-POLONIEX_API_SECRET = ''
+from config import POLONIEX_API_KEY, POLONIEX_API_SECRET
 
 
 polo = Poloniex(key=POLONIEX_API_KEY, secret=POLONIEX_API_SECRET)
 
 
 def make_trade(pair, start_volume):
-    print('[{}]: Attempt to trade'.format(datetime.now().isoformat()))
+    print('[{}]: Attempt to trade with volume: {}'.format(datetime.now().isoformat()), start_volume)
+    if pair['buy']['price'] * start_volume < 0.0001:
+        print('Too small volume')
+        return
     response = polo.buy(pair['buy']['pair'], pair['buy']['price'], start_volume, orderType='fillOrKill')
     next_volume = sum([t['amount'] for t in response['resultingTrades']])
     spend = sum([t['total'] for t in response['resultingTrades']])
@@ -31,6 +33,8 @@ def make_trade(pair, start_volume):
 
 
 if __name__ == "__main__":
+    volume = polo.returnBalances()['BTC']
+
     while True:
         order_books = polo.returnOrderBook(depth=1)
         pairs = list(order_books.keys())
@@ -64,5 +68,5 @@ if __name__ == "__main__":
                     })
         for ps in opps:
             if ps['buy']['pair'].startswith('BTC_'):
-                make_trade(ps, 0.001)
+                make_trade(ps, (volume * (1.0 - 0.0025)))
         time.sleep(2.0)
