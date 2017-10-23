@@ -10,68 +10,85 @@ from config import POLONIEX_API_KEY, POLONIEX_API_SECRET
 
 polo = Poloniex(key=POLONIEX_API_KEY, secret=POLONIEX_API_SECRET)
 
+VOLUME_COEFF = 0.8
+
 
 def make_trade(pair, start_volume):
     start_volume /= pair['buy']['price']
     print('[{}]: Attempt to trade with volume: {}'.format(datetime.now().isoformat(), start_volume))
     if pair['buy']['price'] * start_volume < 0.0001:
         print('Too small volume')
-        return
+        return -1
     response = polo.buy(pair['buy']['pair'], pair['buy']['price'], start_volume, orderType='fillOrKill')
     print(response)
     next_volume = sum([float(t['amount']) for t in response['resultingTrades']])
-    spend = sum([t['total'] for t in response['resultingTrades']])
+    spend = sum([float(t['total']) for t in response['resultingTrades']])
     print('Order #1: spend - {}'.format(spend))
 
-    response = polo.sell(pair['sell1']['pair'], pair['sell1']['price'], next_volume, orderType='fillOrKill')
+    next_volume = min(next_volume, pair['sell1']['volume'])
+    response = polo.sell(pair['sell1']['pair'], pair['sell1']['price'], next_volume * (1.0 - 0.0025), orderType='fillOrKill')
     print(response)
     next_volume = sum([float(t['total']) for t in response['resultingTrades']])
     print('Order #2: got - {}'.format(next_volume))
 
-    response = polo.sell(pair['sell2']['pair'], pair['sell2']['price'], next_volume, orderType='fillOrKill')
+    next_volume = min(next_volume, pair['sell2']['volume'])
+    response = polo.sell(pair['sell2']['pair'], pair['sell2']['price'], next_volume * (1.0 - 0.0025), orderType='fillOrKill')
     print(response)
     profit = sum([float(t['total']) for t in response['resultingTrades']])
     print('Order #3: profit - {}'.format(profit))
 
     print('P&L: {}'.format(profit - spend))
+    return profit - spend
 
 
-if __name__ == "__main__":
+def arbitrage():
     balances = polo.returnBalances()
 
     while True:
-        order_books = polo.returnOrderBook(depth=1)
+        order_books = polo.returnOrderBook(depth=2)
         pairs = list(order_books.keys())
-        currencies = list(set(chain(*[pair.split('_') for pair in pairs])))
         pairs_list = [p.split('_') for p in pairs]
         opps = []
         for ps in permutations(pairs_list, 3):
             ask = float(order_books['_'.join(ps[0])]['asks'][0][0])
+            vol0 = float(order_books['_'.join(ps[0])]['asks'][0][1])
+
             bid1 = float(order_books['_'.join(ps[1])]['bids'][0][0])
+            vol1 = float(order_books['_'.join(ps[1])]['bids'][0][1])
+
             bid2 = float(order_books['_'.join(ps[2])]['bids'][0][0])
+            vol2 = float(order_books['_'.join(ps[2])]['bids'][0][1])
             if ps[0][1] == ps[1][1] and ps[0][0] == ps[2][0] and ps[1][0] == ps[2][1]:
                 diff = bid1 * bid2 / ask
                 if diff > 1 + 0.0085:
-                    print(ps, diff)
-                    print(ps[0], ask)
-                    print(ps[1], bid1)
-                    print(ps[2], bid2)
-                    opps.append({
+                    print(datetime.now(), ps, diff)
+                    trade = {
                         'buy': {
                             'pair': '_'.join(ps[0]),
-                            'price': ask
+                            'price': ask,
+                            'volume': vol0
                         },
                         'sell1': {
                             'pair': '_'.join(ps[1]),
-                            'price': bid1
+                            'price': bid1,
+                            'volume': vol1
                         },
                         'sell2': {
                             'pair': '_'.join(ps[2]),
-                            'price': bid2
+                            'price': bid2,
+                            'volume': vol2
                         }
-                    })
-        for ps in opps:
-            if ps['buy']['pair'].startswith('BTC_'):
-                volume = float(balances['BTC'])
-                make_trade(ps, (volume * (1.0 - 0.0025)))
+                    }
+                    # opps.append(trade)
+                    if trade['buy']['pair'].startswith('BTC_'):
+                        volume = float(balances['BTC'])
+                        volume *= (1.0 - 0.0025)
+                        volume = min(volume, trade['buy']['volume'])
+                        profit = make_trade(trade, volume * VOLUME_COEFF)
+                        if profit != -1:
+                            return
         time.sleep(2.0)
+
+
+if __name__ == "__main__":
+    arbitrage()
