@@ -14,10 +14,15 @@ VOLUME_COEFF = 0.8
 
 
 def make_trade(pair, start_volume):
-    start_volume /= pair['buy']['price']
     print('[{}]: Attempt to trade with volume: {}'.format(datetime.now().isoformat(), start_volume))
     if pair['buy']['price'] * start_volume < 0.0001:
-        print('Too small volume')
+        print('Too small volume for buy')
+        return -1
+    if pair['sell1']['volume'] * (1.0 - 0.0025) < 0.0001:
+        print('Too small volume for sell1')
+        return -1
+    if pair['sell2']['volume'] * (1.0 - 0.0025) < 0.0001:
+        print('Too small volume for sell2')
         return -1
     response = polo.buy(pair['buy']['pair'], pair['buy']['price'], start_volume, orderType='fillOrKill')
     print(response)
@@ -43,6 +48,7 @@ def make_trade(pair, start_volume):
 
 def arbitrage():
     balances = polo.returnBalances()
+    print('Start balance: {} BTC'.format(balances['BTC']))
 
     while True:
         order_books = polo.returnOrderBook(depth=2)
