@@ -17,7 +17,7 @@ MIN_AMOUNT = 0.0001
 
 def make_trade(pair, balance):
 
-    volume = balance
+    volume = balance / pair['buy']['price']
     volume *= (1.0 - 0.0025)
     volume = min(volume, pair['buy']['volume'])
     start_volume = volume * VOLUME_COEFF
