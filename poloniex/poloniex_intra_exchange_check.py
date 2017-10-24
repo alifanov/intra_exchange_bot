@@ -12,16 +12,24 @@ polo = Poloniex(key=POLONIEX_API_KEY, secret=POLONIEX_API_SECRET)
 
 VOLUME_COEFF = 0.8
 
+MIN_AMOUNT = 0.0001
 
-def make_trade(pair, start_volume):
+
+def make_trade(pair, balance):
+
+    volume = balance
+    volume *= (1.0 - 0.0025)
+    volume = min(volume, pair['buy']['volume'])
+    start_volume = volume * VOLUME_COEFF
+
     print('[{}]: Attempt to trade with volume: {}'.format(datetime.now().isoformat(), start_volume))
-    if pair['buy']['price'] * start_volume < 0.0001:
-        print('Too small volume for buy')
+    if pair['buy']['price'] * start_volume < MIN_AMOUNT:
+        print('Too small volume for buy: price: {}, balance: {}, vol: {}, trade vol: {}'.format(pair['buy']['price'], balance, start_volume, pair['buy']['volume']))
         return -1
-    if pair['sell1']['volume'] * (1.0 - 0.0025) < 0.0001:
+    if pair['sell1']['volume'] * (1.0 - 0.0025) < MIN_AMOUNT:
         print('Too small volume for sell1')
         return -1
-    if pair['sell2']['volume'] * (1.0 - 0.0025) < 0.0001:
+    if pair['sell2']['volume'] * (1.0 - 0.0025) < MIN_AMOUNT:
         print('Too small volume for sell2')
         return -1
     response = polo.buy(pair['buy']['pair'], pair['buy']['price'], start_volume, orderType='fillOrKill')
@@ -87,10 +95,7 @@ def arbitrage():
                     }
                     # opps.append(trade)
                     if trade['buy']['pair'].startswith('BTC_'):
-                        volume = float(balances['BTC'])
-                        volume *= (1.0 - 0.0025)
-                        volume = min(volume, trade['buy']['volume'])
-                        profit = make_trade(trade, volume * VOLUME_COEFF)
+                        profit = make_trade(trade, float(balances['BTC']))
                         if profit != -1:
                             return
         time.sleep(2.0)
