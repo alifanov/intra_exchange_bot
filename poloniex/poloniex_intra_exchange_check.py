@@ -26,10 +26,10 @@ def make_trade(pair, balance):
     if pair['buy']['price'] * start_volume < MIN_AMOUNT:
         print('Too small volume for buy: price: {}, balance: {}, vol: {}, trade vol: {}'.format(pair['buy']['price'], balance, start_volume, pair['buy']['volume']))
         return -1
-    if pair['sell1']['volume'] * (1.0 - 0.0025) < MIN_AMOUNT:
+    if pair['sell1']['price'] * pair['sell1']['volume'] * (1.0 - 0.0025) < MIN_AMOUNT:
         print('Too small volume for sell1')
         return -1
-    if pair['sell2']['volume'] * (1.0 - 0.0025) < MIN_AMOUNT:
+    if pair['sell2']['price'] * pair['sell2']['volume'] * (1.0 - 0.0025) < MIN_AMOUNT:
         print('Too small volume for sell2')
         return -1
     response = polo.buy(pair['buy']['pair'], pair['buy']['price'], start_volume, orderType='fillOrKill')
