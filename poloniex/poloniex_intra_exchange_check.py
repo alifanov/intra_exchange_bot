@@ -3,7 +3,7 @@ import time
 from datetime import datetime
 
 from itertools import chain, permutations
-from poloniex import Poloniex
+from poloniex import Poloniex, PoloniexError
 
 from config import POLONIEX_API_KEY, POLONIEX_API_SECRET
 
@@ -45,7 +45,21 @@ def make_trade(pair, balance):
     print('Order #2: got - {}'.format(next_volume))
 
     next_volume = min(next_volume, pair['sell2']['volume'])
-    response = polo.sell(pair['sell2']['pair'], pair['sell2']['price'], next_volume * (1.0 - 0.0025), orderType='fillOrKill')
+    rate = pair['sell2']['price']
+    volume = next_volume * (1.0 - 0.0025)
+
+    while True:
+        try:
+            response = polo.sell(pair['sell2']['pair'], rate, volume, orderType='fillOrKill')
+            break
+        except PoloniexError as e:
+            if 'Total must be at least' in str(e):
+                return -1
+            elif 'Not enough ' in str(e):
+                next_volume *= 0.99  # decrease volume for 1%
+            else:
+                rate *= 0.999
+
     print(response)
     profit = sum([float(t['total']) for t in response['resultingTrades']])
     print('Order #3: profit - {}'.format(profit))
