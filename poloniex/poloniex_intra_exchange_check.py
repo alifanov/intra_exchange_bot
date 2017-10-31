@@ -34,16 +34,30 @@ def make_trade(pair, balance):
         return -1
     response = polo.buy(pair['buy']['pair'], pair['buy']['price'], start_volume, orderType='fillOrKill')
     print(response)
+
     next_volume = sum([float(t['amount']) for t in response['resultingTrades']])
     spend = sum([float(t['total']) for t in response['resultingTrades']])
     print('Order #1: spend - {}'.format(spend))
 
     next_volume = min(next_volume, pair['sell1']['volume'])
-    response = polo.sell(pair['sell1']['pair'], pair['sell1']['price'], next_volume * (1.0 - 0.0025), orderType='fillOrKill')
+    rate = pair['sell1']['price']
+    volume = next_volume * (1.0 - 0.0025)
+
+    while True:
+        try:
+            response = polo.sell(pair['sell1']['pair'], rate, volume, orderType='fillOrKill')
+            break
+        except PoloniexError as e:
+            if 'Total must be at least' in str(e):
+                return 0 - spend
+            elif 'Not enough ' in str(e):
+                next_volume *= 0.99  # decrease volume for 1%
+            else:
+                rate *= 0.999
     print(response)
+
     next_volume = sum([float(t['total']) for t in response['resultingTrades']])
     print('Order #2: got - {}'.format(next_volume))
-
     next_volume = min(next_volume, pair['sell2']['volume'])
     rate = pair['sell2']['price']
     volume = next_volume * (1.0 - 0.0025)
@@ -54,7 +68,7 @@ def make_trade(pair, balance):
             break
         except PoloniexError as e:
             if 'Total must be at least' in str(e):
-                return -1
+                return 0 - spend
             elif 'Not enough ' in str(e):
                 next_volume *= 0.99  # decrease volume for 1%
             else:
