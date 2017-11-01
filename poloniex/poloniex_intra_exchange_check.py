@@ -79,6 +79,7 @@ def make_trade(pair, balance):
     print('Order #3: profit - {}'.format(profit))
 
     print('P&L: {}'.format(profit - spend))
+    print('ROI: {:.4%}'.format((profit - spend) / spend))
     return profit - spend
 
 
