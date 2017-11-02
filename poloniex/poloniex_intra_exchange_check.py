@@ -32,7 +32,22 @@ def make_trade(pair, balance):
     if pair['sell2']['price'] * pair['sell2']['volume'] * (1.0 - 0.0025) < MIN_AMOUNT:
         print('Too small volume for sell2')
         return -1
-    response = polo.buy(pair['buy']['pair'], pair['buy']['price'], start_volume, orderType='fillOrKill')
+
+    rate = pair['buy']['price']
+    volume = start_volume
+
+    while True:
+        try:
+            response = polo.buy(pair['buy']['pair'], rate, volume, orderType='fillOrKill')
+            break
+        except PoloniexError as e:
+            if 'Total must be at least' in str(e):
+                return -1
+            elif 'Not enough ' in str(e):
+                volume *= 0.99  # decrease volume for 1%
+            else:
+                rate *= 1.001
+
     print(response)
 
     next_volume = sum([float(t['amount']) for t in response['resultingTrades']])
@@ -51,7 +66,7 @@ def make_trade(pair, balance):
             if 'Total must be at least' in str(e):
                 return 0 - spend
             elif 'Not enough ' in str(e):
-                next_volume *= 0.99  # decrease volume for 1%
+                volume *= 0.99  # decrease volume for 1%
             else:
                 rate *= 0.999
     print(response)
@@ -70,7 +85,7 @@ def make_trade(pair, balance):
             if 'Total must be at least' in str(e):
                 return 0 - spend
             elif 'Not enough ' in str(e):
-                next_volume *= 0.99  # decrease volume for 1%
+                volume *= 0.99  # decrease volume for 1%
             else:
                 rate *= 0.999
 
